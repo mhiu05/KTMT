@@ -1,3 +1,4 @@
+include "emu8086.inc"
 .Model small 
 
 .Stack 100H   
@@ -27,9 +28,9 @@
     hlth db 6 ;/2  
     
     ;snake infomation
-    sadd dw 07d2h,5 Dup(0)
+    snake_address dw 07d2h,5 Dup(0)
     snake db 'S',5 Dup(0)
-    snake1 db 1
+    snake_len db 1
     
     ;end
     gmwin  db "You Win"
@@ -47,165 +48,151 @@ start:
     
     cld ;clear direction flag: DF = 0
 
-    ; hide con tro chuot
-    mov ah, 1    ; Set Cursor Shape
-    mov ch, 2bh  ; Start Scan Line
-    mov cl, 0bh  ; End Scan Line, ch > cl => hide con tro chuot
-    int 10h      ; BIOS(Basic Input/Output System) video service
-
-    call screen_menu ; print intro game: screen1 -> screen10      
+    call screen_menu ;print main screen: screen1 -> screen10      
     
     startag: ;start again
     
-    call bild ; function display alphabet and border in game
-    xor cl, cl
+    call bild ;function display alphabet and border in game
     
     read: ;read cac cach di chuyen
         mov ah, 1
-        int 16h    ; check xem co phim nao duoc nhan chua
-        jz s1      ; neu khong co thi jump den s1
+        int 16h       ;check xem co phim nao duoc nhan chua
+        jz right      ;neu khong co thi jump den right
         
-        mov ah, 0  ; doc ki tu dem tu ban phim (lay ki tu vua nhan)
+        mov ah, 0     ;doc ki tu dem tu ban phim (lay ki tu vua nhan)
         int 16h    
-        sub al, 20h; convert chu thuong -> chu hoa
+        sub al, 20h   ;convert chu thuong -> chu hoa
         mov dl, al
-        jmp s1
-    
-    s1:                
-        cmp dl, 1bh  ; 1bh: phim esc
-        je ext      ; neu nhan esc -> thoat
         jmp right
     
     right:    
-        cmp dl, 'D' ;di chuyen sang phai
+        cmp dl, 'D'    ;di chuyen sang phai
         jne left
         call move_right
-        mov cl, dl
-        jmp read ;nhay sang doc cach di chuyen tiep theo
+        jmp read       ;nhay sang read cach di chuyen tiep theo
     
-    left: ;di chuyen trai
+    left: 
         cmp dl, 'A'
         jne up
-        call move_left ;goi ham di chuyen sang trai
-        mov cl, dl
-        jmp read ;nhay sang doc cach di chuyen tiep theo
+        call move_left 
+        jmp read 
     
-    up: ;di chuyen len
+    up: 
         cmp dl, 'W'
         jne down
-        call move_up ;goi ham di chuyen len tren
-        mov cl, dl
-        jmp read ;nhay sang doc cach di chuyen tiep theo
+        call move_up
+        jmp read 
     
-    down: ;di chuyen xuong
+    down: 
         cmp dl, 'S'
-        jne read1
-        call move_down ;goi ham di chuyen xuong duoi
-        mov cl, dl
-        jmp read ;nhay sang doc cach di chuyen tiep theo  
-        
-    read1:
-        mov dl, cl
-        jmp read
-        
-    ext:
-        xor cx,cx
-        mov dh, 24
-        mov dl, 79
-        mov bh, 7
-        mov ax, 700h
-        int 10h  
+        jne read
+        call move_down
+        jmp read  
+    
+    exit:
+        call clear_all
         
     ;return 0
-    mov ax,4ch ; exit to operating system.
+    mov ax, 4ch ; exit to operating system.
     int 21h
 ends 
 
 screen_menu proc    ;ham in khung hinh tu screen1 den screen10
-    call border   ;ham xac dinh gioi han duong di cua snake
+    call border   
     
-    mov di, 186h
-    lea si, screen1  ; chuyen noi dung screen1 vao thanh ghi si
+    ;in "Game Team 2"
+    mov di, 186h     ; 186h = 390 = 160 * 2 + 35 * 2 (dong 2, cot 35)
+    lea si, screen1  ; load effective address
     mov cx, 11     ; lap 11 lan
     lapscr1:
         movsb         ; [di] <- [si], sau dó si++, di++ (move string binary)
-        inc di        ; di++, byte ki tu va byte mau
+        inc di        ; di++, byte ki tu va byte color
     loop lapscr1 
-        
+    
+    ;in screen2    
     mov di, 33Eh
-    lea si, screen2  ;chuyen noi dung screen2 vao thanh ghi si
+    lea si, screen2  
     mov cx, 48
     lapscr2:
         movsb
         inc di
     loop lapscr2
     
+    ;in screen3
     mov di, 3DEh
-    lea si, screen3  ;chuyen noi dung screen3 vao thanh ghi si
+    lea si, screen3 
     mov cx, 40
     lapscr3:
         movsb
         inc di
     loop lapscr3 
     
+    ;in screen4
     mov di, 47Eh
-    lea si, screen4  ;chuyen noi dung screen4 vao thanh ghi si
+    lea si, screen4 
     mov cx, 43
     lapscr4:
         movsb
         inc di
     loop lapscr4  
     
+    ;in screen5
     mov di, 5DCh
-    lea si, screen5  ;chuyen noi dung screen5 vao thanh ghi si
+    lea si, screen5  
     mov cx, 10
     lapscr5:
         movsb
         inc di
     loop lapscr5  
     
+    ;in screen6
     mov di, 67Ch
-    lea si, screen6  ;chuyen noi dung screen6 vao thanh ghi si
+    lea si, screen6 
     mov cx, 12
     lapscr6:
         movsb
         inc di
     loop lapscr6  
-
+    
+    ;in screen7
     mov di, 71Ch
-    lea si, screen7  ;chuyen noi dung screen7 vao thanh ghi si
+    lea si, screen7 
     mov cx, 13
     lapscr7:
         movsb
         inc di
     loop lapscr7  
     
+    ;in screen8
     mov di, 7BCh
-    lea si, screen8  ;chuyen noi dung screen8 vao thanh ghi si
+    lea si, screen8  
     mov cx, 12
     lapscr8:
         movsb
         inc di
     loop lapscr8
     
+    ;in about
     mov di, 8DEh
-    lea si, about  ;chuyen noi dung about vao thanh ghi si
+    lea si, about  
     mov cx, 28
     lapabout: 
         movsb
         inc di
     loop lapabout 
-
+    
+    ;in screen9
     mov di, 97Eh
-    lea si, screen9  ;chuyen noi dung screen9 vao thanh ghi si
+    lea si, screen9  
     mov cx, 53
     lapscr9: 
         movsb
         inc di
     loop lapscr9
-
+    
+    ;in screen10
     mov di, 0B5Eh
-    lea si, screen10 ;chuyen noi dung screen10 vao thanh ghi si
+    lea si, screen10 
     mov cx, 25
     lapscr10:
         movsb
@@ -215,13 +202,14 @@ screen_menu proc    ;ham in khung hinh tu screen1 den screen10
     ;Press any key to start
     mov ah, 7     
     int 21h
-
+    
+    ;xoa man hinh hien tai
     call clear_all   
     ret
 screen_menu endp
 
 ; Game screen
-bild proc           ; function display alphabet and border in game
+bild proc           ;function display alphabet and border in game
     call border     ;ham xac dinh gioi han duong di cua snake 
     
     ;display hlths: lives
@@ -243,13 +231,13 @@ bild proc           ; function display alphabet and border in game
     loop lap2
     
     ;display snake and alphabet
-    xor dx, dx      ; mov dx, 0
-    mov di, sadd    ; dia chi bat dau ran
-    mov dl, snake   ; ki tu dai dien ran: 'D'
+    xor dx, dx   
+    mov di, snake_address    ; dia chi bat dau ran
+    mov dl, snake            ; ki tu dai dien ran: 'S'
     ;es: extra segment (es: 0b800h)
-    es: mov [di],dl     ; vi tri snake init
-    es: mov [09b4h], 'N' ; vi tri cac chu cai tren screen
-    es: mov [0848h], 'A' ; offset = (y * 80 + x) * 2
+    es: mov [di],dl          ; vi tri snake init
+    es: mov [09b4h], 'N'     ; vi tri cac chu cai tren screen
+    es: mov [0848h], 'A'   
     es: mov [06b0h], 'K'
     es: mov [01E8h], 'E'
     ret
@@ -259,10 +247,8 @@ bild endp
 move_left proc
     push dx
     call replace_address   ; goi ham thay doi dia chi
-    sub sadd,2
-
+    sub snake_address, 2
     call eat           ; goi ham eat va xu ly so nang
-
     call move_snake    ; goi ham di chuyen cua snake
     pop dx
     ret
@@ -270,35 +256,30 @@ move_left endp
 
 move_right proc
     push dx
-    call replace_address ; goi ham thay doi dia chi
-    add sadd,2
-
-    call eat           ; goi ham eat va xu ly so nang
-
-    call move_snake    ; goi ham di chuyen cua snake
+    call replace_address 
+    add snake_address, 2
+    call eat         
+    call move_snake   
     pop dx
     ret
 move_right endp
 
 move_up proc
     push dx
-    call replace_address   ; goi ham thay doi dia chi
-    sub sadd,160        ; 160 = 80 * 2 
-
-    call eat           ; goi ham eat va xu ly so nang
-
-    call move_snake    ; goi ham di chuyen cua snake
+    call replace_address   
+    sub snake_address, 160      
+    call eat          
+    call move_snake   
     pop dx
     ret
 move_up endp
 
 move_down proc
     push dx
-    call replace_address ; goi ham thay doi dia chi
-    add sadd, 160
-		 
-    call eat         ;goi ham eat va xu ly so nang
-    call move_snake  ;goi ham di chuyen cua snake
+    call replace_address 
+    add snake_address, 160		 
+    call eat         
+    call move_snake  
     pop dx
     ret
 move_down endp
@@ -315,8 +296,8 @@ replace_address proc   ;ham thay doi dia chi
 
     xor dx,dx
     shiftsnake:
-        mov dx, sadd[bx-2]
-        mov sadd[bx], dx
+        mov dx, snake_address[bx-2]
+        mov snake_address[bx], dx
         sub bx, 2
     loop shiftsnake:
     pop ax
@@ -331,7 +312,7 @@ eat proc ;ham eat va xu ly so mang
     push si
     push di
 
-    mov di, sadd
+    mov di, snake_address
     es: cmp [di], 0
     je no
     es: cmp [di], 20h  ; so sanh voi space - tuong
@@ -436,13 +417,13 @@ move_snake proc ;ham di chuyen snake
     mov cl, snake1
     xor bx, bx
     l1mr:
-        mov di, sadd[si] ;di: vi tri doan ran thu si (tu mang sadd)
+        mov di, snake_address[si] ;di: vi tri doan ran thu si (tu mang sadd)
         mov dl, snake[bx];dl: ky tu doan ran thu bx (tu mang snake)
         es: mov [di], dl ;ghi ki tu len man hinh tai vi tri di
         add si, 2
         inc bx
     loop l1mr
-    mov di, sadd[si]
+    mov di, snake_address[si]
     es:mov [di],0
     ret
 move_snake endp
@@ -492,14 +473,14 @@ restart proc ;ham khoi dong lai game sau khi mat 1 mang
     mov cl, snake1
     inc cl
     delt:
-        mov di, sadd[si]
+        mov di, snake_address[si]
         es:mov [di],0
         add si,2
     loop delt
     
     mov fin, 4
     
-    mov sadd, 07D2h
+    mov snake_address, 07D2h
     mov cl, snake1
     inc cl
     xor si, si
@@ -508,7 +489,7 @@ restart proc ;ham khoi dong lai game sau khi mat 1 mang
     add di, 2
     emptsn:
         mov snake[si], 0
-        mov sadd[di], 0
+        mov snake_address[di], 0
         add di, 2
         inc si
     loop emptsn
@@ -524,7 +505,7 @@ restart proc ;ham khoi dong lai game sau khi mat 1 mang
         add bx, 2
     loop reslet
     xor si, si
-    mov snake[si], 'D'
+    mov snake[si], 'S'
     
     jmp startag ;nhay ve chuong trinh read cach di chuyen va tao khung ban dau
     ret    
@@ -566,26 +547,26 @@ win proc
     mov di, 7cah
     lea si, gmwin
     mov cx, 7
-    lope1w:
+    for11:
         movsb
         inc di
-    loop lope1w
+    loop for11
     
     ;in ra: "Press Esc to exit"
     mov di, 862h
     lea si, endtxt
     mov cx, 17  
-    lope2:
+    for12:
         movsb
         inc di
-    loop lope2
+    loop for12
     
-    qwer1:
+    quit_win:
         mov ah, 7   ;nhap 1 ki tu khong echo
         int 21h
-        cmp al, 1bh
-        je ext
-        jmp qwer1    
+        cmp al, 1bh ; cmp al, esc
+        je exit
+        jmp quit_win   
     ret
 win endp   
 
@@ -597,26 +578,26 @@ game_over proc
     mov di, 7c8h
     lea si, gmov
     mov cx, 9
-    lope1:
+    for1:
         movsb
         inc di
-    loop lope1
+    loop for1
     
     ;in "Press Esc to exit"
     mov di, 862h
     lea si, endtxt
     mov cx, 17
-    lope2w:
+    for2:
         movsb
         inc di
-    loop lope2w
+    loop for2
     
-    qwer:
+    quit_lose:
         mov ah, 7
         int 21h
         cmp al, 1bh
-        je ext
-        jmp qwer
+        je exit
+        jmp quit_lose
     ret
 game_over endp
 
@@ -624,8 +605,8 @@ clear_all proc ;ham xoa noi dung man hinh van ban
     xor cx, cx   ;row start = 0, col start = 0
     mov dh, 24   ;row end = 24
     mov dl, 79   ;col end = 79
-    mov bh, 7    ;while(text) on black(background)
-    mov ax, 700h ; ah = 07h (scroll), al = 00h (clear)
+    mov bh, 7    ;white(text) on black(background)
+    mov ax, 700h ;ah = 07h (scroll), al = 00h (clear)
     int 10h    
     ret
 clear_all endp 
