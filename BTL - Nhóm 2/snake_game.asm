@@ -21,11 +21,11 @@ include "emu8086.inc"
     hlths  db "Lives:",3,3,3    
     
     ;ingame
-    letadd  dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
-    dletadd dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
-    letnum  db 4
-    fin  db 4
-    hlth db 6 ;/2  
+    letters_address  dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
+    dletters_address dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
+    letters_num  db 4
+    letters_num_check  db 4
+    hlth db 6   
     
     ;snake infomation
     snake_address dw 07d2h,5 Dup(0)
@@ -46,7 +46,7 @@ start:
     mov ax, 0b800h ; 0B800h là vùng nho video trong che do van ban (text mode) 80x25 cua DOS.
     mov es, ax    
     
-    cld ;clear direction flag: DF = 0
+    cld ;clear direction flag: DF = 0 
 
     call screen_menu ;print main screen: screen1 -> screen10      
     
@@ -247,7 +247,7 @@ bild endp
 move_left proc
     push dx
     call replace_address   ; goi ham thay doi dia chi
-    sub snake_address, 2
+    sub snake_address[0], 2
     call eat           ; goi ham eat va xu ly so nang
     call move_snake    ; goi ham di chuyen cua snake
     pop dx
@@ -257,7 +257,7 @@ move_left endp
 move_right proc
     push dx
     call replace_address 
-    add snake_address, 2
+    add snake_address[0], 2
     call eat         
     call move_snake   
     pop dx
@@ -267,7 +267,7 @@ move_right endp
 move_up proc
     push dx
     call replace_address   
-    sub snake_address, 160      
+    sub snake_address[0], 160      
     call eat          
     call move_snake   
     pop dx
@@ -277,7 +277,7 @@ move_up endp
 move_down proc
     push dx
     call replace_address 
-    add snake_address, 160		 
+    add snake_address[0], 160		 
     call eat         
     call move_snake  
     pop dx
@@ -288,23 +288,23 @@ replace_address proc   ;ham thay doi dia chi
     push ax
     xor ch, ch
     xor bh, bh
-    mov cl, snake1     ; cl: do dai cua ran hien tai
-    inc cl             ;++cl vì can 1 o cho dau moi
-    mov al, 2
-    mul cl
-    mov bl, al                      
-
-    xor dx,dx
+    mov cl, snake_len  ;cl: do dai cua ran hien tai    
+    mov al, 2          ;moi phan tu chiem 2 byte
+    mul cl             ;ax = al * cl = 2 * snake_len
+    mov bl, al         ;vi tri cuoi cung trong snake_address             
+    xor dx, dx          ;bien temp  
+    
+    ;dich phan tu trong snake_address sang ben phai
     shiftsnake:
-        mov dx, snake_address[bx-2]
-        mov snake_address[bx], dx
+        mov dx, snake_address[bx-2] ;lay phan tu o vi tri (i - 1)
+        mov snake_address[bx], dx   ;gan vao vi tri i
         sub bx, 2
     loop shiftsnake:
     pop ax
     ret
 replace_address endp
 
-eat proc ;ham eat va xu ly so mang
+eat proc 
     push ax
     push bx
     push cx
@@ -313,29 +313,34 @@ eat proc ;ham eat va xu ly so mang
     push di
 
     mov di, snake_address
+    ;neu khong co gi
     es: cmp [di], 0
-    je no
-    es: cmp [di], 20h  ; so sanh voi space - tuong
+    je no 
+    
+    ;neu co wall
+    es: cmp [di], 20h     ;so sanh voi space(wall)
     je wall
-
+    
+    ;neu co letters
     xor ch, ch
-    mov cl, letnum   ;cl: so luong chu cai con lai (letnum)
-    xor si, si       ;si = 0 (de duyet mang letnum)
+    mov cl, letters_num   ;cl: so luong chu cai con lai (letters_num)
+    xor si, si            ;si = 0 (de duyet mang letters_address)
 
     lop:
-        cmp di, letadd[si] ;so sanh di voi vi tri chu cai thu si
-        je addf     ; neu trung thi jmp den addf (an moi)
-        add si, 2   ;si += 2 (moi phan tu letnum la word)
-        loop lop    ;lap den khi cl = 0
+        cmp di, letters_address[si] ;so sanh di voi vi tri chu cai thu si
+        je eat_letters    ; neu trung thi jmp den eat_letters (an moi) 
+        ;neu khong thi tiep tuc cmp voi cac phan tu con lai trong letters_address
+        add si, 2   ;si += 2 (moi phan tu la word)
+        loop lop    
         jmp wall
     
-    addf:
+    eat_letters:
         ; Xóa chu cái da an
-        mov letadd[si], 0
+        mov letters_address[si], 0
     
         ; Luu ký tu vào snake[]
         xor bh, bh
-        mov bl, snake1 ; do dai hien tai cua ran
+        mov bl, snake_len ; do dai hien tai cua ran
         es: mov dl, [di]  ;ky tu tai vi tri di (chu cai an duoc)
         mov snake[bx], dl ;luu ky tu vao mang snake
     
@@ -343,45 +348,44 @@ eat proc ;ham eat va xu ly so mang
         es: mov [di], 0
     
         ; tang do dai ran và giam so chu cai con lai    
-        add snake1, 1
-        sub fin, 1
+        add snake_len, 1
+        sub letters_num_check, 1
     
-        cmp fin, 0  ; kiem tra xem con moi khong
-        je chkletters
+        cmp letters_num_check, 0  ; kiem tra xem con moi khong
+        je check_letters
         jmp no
     
     wall:
-        cmp di, 320    ;kiem tra xem co cham bien tren khong (dong 1)
-        jbe wallk
+        cmp di, 320    ;kiem tra xem co cham bien tren khong (dong 2)
+        jle die
         cmp di, 3840   ;kiem tra xem co cham bien duoi khong (dong 24)
-        jae wallk
+        jge die
         
         ;kiem tra cham bien trai, phai
         mov ax, di
         mov bl, 160 ;160 byte/dong (80 cot * 2 byte)   
-        div bl      ; ax/bl -> ah = so du (vi tri cot)   
-        cmp ah, 0   ; bien trai
-        jz wallk
+        div bl      ;ax/bl -> ah = so du (vi tri cot: ah / 2)   
+        cmp ah, 0   ;bien trai
+        je die
         
         mov ax, di
-        add ax, 2
         mov bl, 160
         div bl    
-        cmp ah, 0 ;bien phai
-        je wallk    
+        cmp ah, 158 ;bien phai
+        je die    
         jmp no
     
-    wallk:
+    die:
         ;giam mang song
         xor bh, bh
         mov bl, hlth
-        es: mov [bx+10], 0 ;xoa hien thi mang song tren man hinh
-        mov hlths[bx+2], 0 ; cap nhat gia tri trong mang hlths
-        sub hlth, 2       ;giam mang song di 1 (moi mang bang 2 byte)
-        cmp hlth, 0       ;kiem tra con mang khong
+        es: mov [bx+10], 0 ;xoa phan tu cuoi trong hlths (1 mang song) tren man hinh
+        mov hlths[bx+2], 0 ;loai bo phan tu cuoi trong mang hlths
+        sub hlth, 2        ;giam mang song di 1 (moi mang = 2 byte)
+        cmp hlth, 0        ;kiem tra con mang khong
         jne rest           ;neu con -> restart
     
-        ; Game over
+        ; Neu khong con thi game over
         pop ax
         pop bx
         pop cx
@@ -409,55 +413,55 @@ eat proc ;ham eat va xu ly so mang
     ret
 eat endp
 
-
-move_snake proc ;ham di chuyen snake
+move_snake proc 
     xor ch, ch
     xor si, si
     xor dl, dl
-    mov cl, snake1
     xor bx, bx
-    l1mr:
-        mov di, snake_address[si] ;di: vi tri doan ran thu si (tu mang sadd)
-        mov dl, snake[bx];dl: ky tu doan ran thu bx (tu mang snake)
-        es: mov [di], dl ;ghi ki tu len man hinh tai vi tri di
+    mov cl, snake_len
+    loopp:
+        mov di, snake_address[si] ;di: vi tri doan ran thu si (tu mang snake_address)
+        mov dl, snake[bx]         ;dl: ky tu doan ran thu bx (tu mang snake)
+        es: mov [di], dl          ;ghi ki tu len man hinh tai vi tri di
         add si, 2
         inc bx
-    loop l1mr
+    loop loopp 
+    ;xoa phan tu cuoi cua ran tren man hinh
     mov di, snake_address[si]
-    es:mov [di],0
+    es: mov [di],0
     ret
 move_snake endp
 
 border proc ; ham xác dinh gioi han duong di cua snake
     mov ah, 0    ; Chuc nang "Set Video Mode" (Thiet lap che do man hinh)
     mov al, 3    ; Che do 3: 80x25 text mode voi 16 mau
-    int 10h         
+    int 10h             
     
     mov ah, 6      ; Chuc nang cuon màn hình lên (Scroll Up Window)
     mov al, 0      ; So dòng cuon (0 = xóa toàn bo vùng chon)
-    mov bh, 0FFh   ; Màu nen (0FFh = mau trang)
+    mov bh, 0FFh   ; Màu nen (0FFh = mau trang)  
     
     ; Vien tren
     mov ch, 1      ; Dòng bat dau (y1 = 1)
     mov cl, 0      ; Cot bat dau (x1 = 0)
     mov dh, 1      ; Dòng ket thúc (y2 = 1)
-    mov dl, 80     ; Cot ket thúc (x2 = 80)
+    mov dl, 80     ; Cot ket thúc (x2 = 80) 
+    
     int 10h 
-
     ; Vien duoi
     mov ch, 24
     mov cl, 0
     mov dh, 24
     mov dl, 79
-    int 10h
-
+    int 10h     
+    
     ; Vien trai
     mov ch, 1
     mov cl, 0
     mov dh, 24
     mov dl, 0
-    int 10h
-
+    int 10h    
+    
     ; Vien phai
     mov ch, 1
     mov cl, 79
@@ -468,52 +472,58 @@ border proc ; ham xác dinh gioi han duong di cua snake
 border endp      
 
 restart proc ;ham khoi dong lai game sau khi mat 1 mang
+    ;delete letters in screen
     xor ch, ch
     xor si, si
-    mov cl, snake1
+    mov cl, snake_len
     inc cl
-    delt:
+    delete:
         mov di, snake_address[si]
-        es:mov [di],0
-        add si,2
-    loop delt
+        es:mov [di], 0
+        add si, 2
+    loop delete
     
-    mov fin, 4
+    mov letters_num_check, 4
     
+    ;reset snake_address[], snake[]
     mov snake_address, 07D2h
-    mov cl, snake1
+    mov cl, snake_len
     inc cl
     xor si, si
     inc si
     xor di, di
     add di, 2
-    emptsn:
+    empty:
         mov snake[si], 0
         mov snake_address[di], 0
         add di, 2
         inc si
-    loop emptsn
-    mov snake1, 1
+    loop empty
     
+    
+    ;reset letters_address[]
     xor ch, ch
-    mov cl, letnum
+    mov cl, letters_num
     xor si, si
-    reslet:
-        mov bx, dletadd[si]
-        mov letadd[si], bx
+    reset_leters:
+        mov bx, dletters_address[si]
+        mov letters_address[si], bx
         add si, 2
-        add bx, 2
-    loop reslet
+    loop reset_leters
+    
+    ;reset snake_len, head snake
+    mov snake_len, 1
     xor si, si
     mov snake[si], 'S'
     
-    jmp startag ;nhay ve chuong trinh read cach di chuyen va tao khung ban dau
+    jmp startag 
     ret    
 restart endp
 
-chkletters proc 
+check_letters proc 
     call move_snake ;cap nhat vi tri ran tren man hinh
     
+    ;ktra xem co dung thu tu SNAKE khong
     cmp snake[1],'N'
     jne endtest1   
     cmp snake[2],'A'
@@ -525,6 +535,7 @@ chkletters proc
     call win  
     
     endtest1:
+        ;giam mang song
         xor bh, bh
         mov bl, hlth
         es: mov [bx+10], 0
@@ -537,7 +548,7 @@ chkletters proc
     restc:
         call restart 
     ret
-chkletters endp
+check_letters endp
 
 win proc 
     call clear_all 
