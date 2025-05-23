@@ -5,50 +5,59 @@ include "emu8086.inc"
 
 .Data
     ;main screen
-    screen1  db "Game Team 2"
-    screen2  db "In this game you must eat 4 letters by sequence:"
-    screen3  db "First eat 'N' then 'A' then 'K' then 'E'"
-    screen4  db "Move the snake by pressing the keys w,a,s,d"
-    screen5  db "w: move up"
-    screen6  db "s: move down"
-    screen7  db "d: move right"
-    screen8  db "a: move left"
-    screen9  db "The snake head is the 'S' in the middle of the screen"
-    screen10 db "Press any key to start..."
-    about db "This game is done by: TEAM 2"   
+    screen1  db "Game Team 2$"
+    screen2  db "In this game you must eat 4 letters by sequence:$"
+    screen3  db "First eat 'N' then 'A' then 'K' then 'E'$"
+    screen4  db "Move the snake by pressing the keys w,a,s,d$"
+    screen5  db "w: move up$"
+    screen6  db "s: move down$"
+    screen7  db "d: move right$"
+    screen8  db "a: move left$"
+    screen9  db "The snake head is the 'S' in the middle of the screen$"
+    screen10 db "Press any key to start...$"
+    about db "This game is done by: TEAM 2$"   
     
     ;bild
     hlths  db "Lives:",3,3,3    
     
+    ;pos
+    posN EQU 09b4h
+    posA EQU 0848h
+    posK EQU 06b0h
+    posE EQU 01E8h
+    
     ;ingame
-    letters_address  dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
-    dletters_address dw 09b4h,0848h,06b0h,01e8h,4 Dup(0)
+    letters_address  dw 09b4h,0848h,06b0h,01e8h,4 Dup(?)
+    dletters_address dw 09b4h,0848h,06b0h,01e8h,4 Dup(?)
     letters_num  db 4
     letters_num_check  db 4
     hlth db 6   
     
     ;snake infomation
-    snake_address dw 07d2h,5 Dup(0)
-    snake db 'S',5 Dup(0)
+    snake_address dw 07d2h,5 Dup(?)
+    snake db 'S',5 Dup(?)
     snake_len db 1
     
     ;end
-    gmwin  db "You Win"
-    gmov   db "Game Over"
-    endtxt db "Press Esc to exit"
+    gmwin  db "You Win$"
+    gmov   db "Game Over$"
+    endtxt db "Press Esc to exit$"
 
-.Code
+.Code      
+ 
 start:
-    ;khoi tao ds  
     mov ax, @data    
     mov ds, ax ;tro thanh ghi ds ve dau doan data
     
-    mov ax, 0b800h ; 0B800h l‡ v˘ng nho video trong che do van ban (text mode) 80x25 cua DOS.
+    mov ax, 0b800h ; 0B800h l‡ v˘ng nho video trong che do van ban (text mode) 80x25
     mov es, ax    
     
-    cld ;clear direction flag: DF = 0 
-
-    call screen_menu ;print main screen: screen1 -> screen10      
+    cld ; DF = 0 
+    
+    call intro
+    
+    print_screen_menu:
+        call screen_menu ;print main screen: screen1 -> screen10      
     
     startag: ;start again
     
@@ -91,7 +100,9 @@ start:
     
     exit:
         call clear_all
-        
+        jmp endd
+    endd:
+        call gudbye
     ;return 0
     mov ax, 4ch ; exit to operating system.
     int 21h
@@ -101,103 +112,60 @@ screen_menu proc    ;ham in khung hinh tu screen1 den screen10
     call border   
     
     ;in "Game Team 2"
-    mov di, 186h     ; 186h = 390 = 160 * 2 + 35 * 2 (dong 2, cot 35)
-    lea si, screen1  ; load effective address
-    mov cx, 11     ; lap 11 lan
-    lapscr1:
-        movsb         ; [di] <- [si], sau dÛ si++, di++ (move string binary)
-        inc di        ; di++, byte ki tu va byte color
-    loop lapscr1 
+    GOTOXY 35, 2
+    lea dx, screen1 
+    mov ah,9
+    int 21h 
     
-    ;in screen2    
-    mov di, 33Eh
-    lea si, screen2  
-    mov cx, 48
-    lapscr2:
-        movsb
-        inc di
-    loop lapscr2
+    GOTOXY 16, 6
+    lea dx, screen2 
+    mov ah,9
+    int 21h 
     
-    ;in screen3
-    mov di, 3DEh
-    lea si, screen3 
-    mov cx, 40
-    lapscr3:
-        movsb
-        inc di
-    loop lapscr3 
+    GOTOXY 16, 7
+    lea dx, screen3 
+    mov ah,9
+    int 21h 
     
-    ;in screen4
-    mov di, 47Eh
-    lea si, screen4 
-    mov cx, 43
-    lapscr4:
-        movsb
-        inc di
-    loop lapscr4  
+    GOTOXY 16, 8
+    lea dx, screen4 
+    mov ah,9
+    int 21h 
     
-    ;in screen5
-    mov di, 5DCh
-    lea si, screen5  
-    mov cx, 10
-    lapscr5:
-        movsb
-        inc di
-    loop lapscr5  
+    GOTOXY 31, 10
+    lea dx, screen5 
+    mov ah,9
+    int 21h 
     
-    ;in screen6
-    mov di, 67Ch
-    lea si, screen6 
-    mov cx, 12
-    lapscr6:
-        movsb
-        inc di
-    loop lapscr6  
+    GOTOXY 31, 11
+    lea dx, screen6 
+    mov ah,9
+    int 21h 
     
-    ;in screen7
-    mov di, 71Ch
-    lea si, screen7 
-    mov cx, 13
-    lapscr7:
-        movsb
-        inc di
-    loop lapscr7  
+    GOTOXY 31, 12
+    lea dx, screen7 
+    mov ah,9
+    int 21h 
     
-    ;in screen8
-    mov di, 7BCh
-    lea si, screen8  
-    mov cx, 12
-    lapscr8:
-        movsb
-        inc di
-    loop lapscr8
+    GOTOXY 31, 13
+    lea dx, screen8 
+    mov ah,9
+    int 21h 
     
-    ;in about
-    mov di, 8DEh
-    lea si, about  
-    mov cx, 28
-    lapabout: 
-        movsb
-        inc di
-    loop lapabout 
+    GOTOXY 16, 15
+    lea dx, about 
+    mov ah,9
+    int 21h 
     
-    ;in screen9
-    mov di, 97Eh
-    lea si, screen9  
-    mov cx, 53
-    lapscr9: 
-        movsb
-        inc di
-    loop lapscr9
+    GOTOXY 16, 16
+    lea dx, screen9 
+    mov ah,9
+    int 21h 
     
-    ;in screen10
-    mov di, 0B5Eh
-    lea si, screen10 
-    mov cx, 25
-    lapscr10:
-        movsb
-        inc di
-    loop lapscr10
+    GOTOXY 16, 19
+    lea dx, screen10 
+    mov ah,9
+    int 21h 
     
     ;Press any key to start
     mov ah, 7     
@@ -210,7 +178,7 @@ screen_menu endp
 
 ; Game screen
 bild proc           ;function display alphabet and border in game
-    call border     ;ham xac dinh gioi han duong di cua snake 
+    call border     ;ham tao vien 
     
     ;display hlths: lives
     lea si, hlths
@@ -221,35 +189,32 @@ bild proc           ;function display alphabet and border in game
         inc di
     loop lap1
     
-    ;display screen1: game team 2
-    lea si, screen1
-    mov di, 088h
-    mov cx, 11
-    lap2:
-    	movsb
-        inc di
-    loop lap2
+    ;in "Game Team 2"
+    GOTOXY 68, 0
+    lea dx, screen1 
+    mov ah,9
+    int 21h 
     
     ;display snake and alphabet
     xor dx, dx   
-    mov di, snake_address    ; dia chi bat dau ran
-    mov dl, snake            ; ki tu dai dien ran: 'S'
+    mov di, snake_address[0]    ; dia chi bat dau ran
+    mov dl, snake[0]            ; ki tu dai dien ran: 'S'
     ;es: extra segment (es: 0b800h)
-    es: mov [di],dl          ; vi tri snake init
-    es: mov [09b4h], 'N'     ; vi tri cac chu cai tren screen
-    es: mov [0848h], 'A'   
-    es: mov [06b0h], 'K'
-    es: mov [01E8h], 'E'
+    es: mov [di], dl          ; vi tri snake init
+    es: mov [posN], 'N'     ; vi tri cac chu cai tren screen
+    es: mov [posA], 'A'   
+    es: mov [posK], 'K'
+    es: mov [posE], 'E'
     ret
 bild endp
 
 ; snake move:
 move_left proc
     push dx
-    call replace_address   ; goi ham thay doi dia chi
+    call replace_address    ;ham thay doi dia chi snake in screen
     sub snake_address[0], 2
-    call eat           ; goi ham eat va xu ly so nang
-    call move_snake    ; goi ham di chuyen cua snake
+    call eat           
+    call move_snake    
     pop dx
     ret
 move_left endp
@@ -284,15 +249,16 @@ move_down proc
     ret
 move_down endp
 
-replace_address proc   ;ham thay doi dia chi
+replace_address proc  
     push ax
     xor ch, ch
     xor bh, bh
-    mov cl, snake_len  ;cl: do dai cua ran hien tai    
+    mov cl, snake_len  ;cl: do dai cua ran hien tai     
+    inc cl
     mov al, 2          ;moi phan tu chiem 2 byte
     mul cl             ;ax = al * cl = 2 * snake_len
     mov bl, al         ;vi tri cuoi cung trong snake_address             
-    xor dx, dx          ;bien temp  
+    xor dx, dx         ;bien temp  
     
     ;dich phan tu trong snake_address sang ben phai
     shiftsnake:
@@ -312,7 +278,7 @@ eat proc
     push si
     push di
 
-    mov di, snake_address
+    mov di, snake_address[0]
     ;neu khong co gi
     es: cmp [di], 0
     je no 
@@ -324,41 +290,38 @@ eat proc
     ;neu co letters
     xor ch, ch
     mov cl, letters_num   ;cl: so luong chu cai con lai (letters_num)
-    xor si, si            ;si = 0 (de duyet mang letters_address)
-
+    xor si, si            ;si = 0 (de duyet letters_address[])
     lop:
         cmp di, letters_address[si] ;so sanh di voi vi tri chu cai thu si
-        je eat_letters    ; neu trung thi jmp den eat_letters (an moi) 
+        je eat_letters    ; neu trung thi jmp den eat_letters 
         ;neu khong thi tiep tuc cmp voi cac phan tu con lai trong letters_address
         add si, 2   ;si += 2 (moi phan tu la word)
-        loop lop    
-        jmp wall
+    loop lop    
+    jmp wall
     
     eat_letters:
-        ; XÛa chu c·i da an
-        mov letters_address[si], 0
-    
+        mov letters_address[si], 0        
+                
         ; Luu k˝ tu v‡o snake[]
         xor bh, bh
-        mov bl, snake_len ; do dai hien tai cua ran
-        es: mov dl, [di]  ;ky tu tai vi tri di (chu cai an duoc)
-        mov snake[bx], dl ;luu ky tu vao mang snake
-    
-        ; XÛa trÍn m‡n hÏnh (neu can)
+        mov bl, snake_len ;do dai hien tai cua ran
+        es: mov dl, [di]  ;[di]: ky tu an duoc
+        mov snake[bx], dl ;luu ky tu vao snake[]
+
         es: mov [di], 0
-    
-        ; tang do dai ran v‡ giam so chu cai con lai    
+        
+        ; tang do dai ran, giam so letters con lai    
         add snake_len, 1
         sub letters_num_check, 1
     
-        cmp letters_num_check, 0  ; kiem tra xem con moi khong
+        cmp letters_num_check, 0  ;kiem tra xem con moi khong
         je check_letters
-        jmp no
-    
-    wall:
-        cmp di, 320    ;kiem tra xem co cham bien tren khong (dong 2)
+        jmp no    
+    wall:        
+        ;kiem tra cham bien tren, duoi
+        cmp di, 320    ;bien tren
         jle die
-        cmp di, 3840   ;kiem tra xem co cham bien duoi khong (dong 24)
+        cmp di, 3840   ;bien duoi
         jge die
         
         ;kiem tra cham bien trai, phai
@@ -373,13 +336,12 @@ eat proc
         div bl    
         cmp ah, 158 ;bien phai
         je die    
-        jmp no
-    
+        jmp no    
     die:
         ;giam mang song
         xor bh, bh
         mov bl, hlth
-        es: mov [bx+10], 0 ;xoa phan tu cuoi trong hlths (1 mang song) tren man hinh
+        es: mov [bx+10], 0 ;xoa phan tu cuoi trong hlths tren man hinh
         mov hlths[bx+2], 0 ;loai bo phan tu cuoi trong mang hlths
         sub hlth, 2        ;giam mang song di 1 (moi mang = 2 byte)
         cmp hlth, 0        ;kiem tra con mang khong
@@ -392,8 +354,7 @@ eat proc
         pop dx
         pop si
         pop di
-        call game_over
-    
+        call game_over    
     rest:
         pop ax
         pop bx
@@ -401,8 +362,7 @@ eat proc
         pop dx
         pop si
         pop di
-        call restart
-    
+        call restart    
     no:
         pop ax
         pop bx
@@ -445,9 +405,9 @@ border proc ; ham x·c dinh gioi han duong di cua snake
     mov ch, 1      ; DÚng bat dau (y1 = 1)
     mov cl, 0      ; Cot bat dau (x1 = 0)
     mov dh, 1      ; DÚng ket th˙c (y2 = 1)
-    mov dl, 80     ; Cot ket th˙c (x2 = 80) 
+    mov dl, 80     ; Cot ket th˙c (x2 = 80)     
+    int 10h    
     
-    int 10h 
     ; Vien duoi
     mov ch, 24
     mov cl, 0
@@ -472,7 +432,7 @@ border proc ; ham x·c dinh gioi han duong di cua snake
 border endp      
 
 restart proc ;ham khoi dong lai game sau khi mat 1 mang
-    ;delete letters in screen
+    ;delete snake in screen
     xor ch, ch
     xor si, si
     mov cl, snake_len
@@ -499,7 +459,6 @@ restart proc ;ham khoi dong lai game sau khi mat 1 mang
         add di, 2
         inc si
     loop empty
-    
     
     ;reset letters_address[]
     xor ch, ch
@@ -543,8 +502,7 @@ check_letters proc
         sub hlth, 2
         cmp hlth, 0
         jne restc
-        call game_over   
-        
+        call game_over           
     restc:
         call restart 
     ret
@@ -555,22 +513,16 @@ win proc
     call border 
     
     ;in ra: "You Win"
-    mov di, 7cah
-    lea si, gmwin
-    mov cx, 7
-    for11:
-        movsb
-        inc di
-    loop for11
+    GOTOXY 38, 13
+    lea dx, gmwin
+    mov ah,9
+    int 21h 
     
     ;in ra: "Press Esc to exit"
-    mov di, 862h
-    lea si, endtxt
-    mov cx, 17  
-    for12:
-        movsb
-        inc di
-    loop for12
+    GOTOXY 34, 14
+    lea dx, endtxt
+    mov ah,9
+    int 21h 
     
     quit_win:
         mov ah, 7   ;nhap 1 ki tu khong echo
@@ -586,27 +538,21 @@ game_over proc
     call border
     
     ;in "Game Over"
-    mov di, 7c8h
-    lea si, gmov
-    mov cx, 9
-    for1:
-        movsb
-        inc di
-    loop for1
+    GOTOXY 37, 13
+    lea dx, gmov 
+    mov ah,9
+    int 21h 
     
     ;in "Press Esc to exit"
-    mov di, 862h
-    lea si, endtxt
-    mov cx, 17
-    for2:
-        movsb
-        inc di
-    loop for2
+    GOTOXY 34, 14
+    lea dx, endtxt   
+    mov ah,9
+    int 21h 
     
     quit_lose:
         mov ah, 7
         int 21h
-        cmp al, 1bh
+        cmp al, 1bh 
         je exit
         jmp quit_lose
     ret
@@ -621,5 +567,138 @@ clear_all proc ;ham xoa noi dung man hinh van ban
     int 10h    
     ret
 clear_all endp 
-
+  
+intro proc
+    mov di, 324        ;vi tri bat dau in   
+    mov dl, 4          ;dx dung de chinh mau
+    mov bx, 4          ;bx dung de chinh huong in 
+    
+    check:   
+        ;check huong di
+        cmp bx, 4
+        jz print_sang_phai
+        cmp bx, 3
+        jz print_tren_xuong
+        cmp bx, 2
+        jz print_phai_sang
+        cmp bx, 1               
+        jz print_duoi_len 
+        
+    rand_mau:
+        ;doi mau
+        cmp dl, 3
+        jz next_char1
+        cmp dl, 2
+        jz next_char2  
+        cmp dl, 1
+        jz next_char3        
+        mov dl,3     ;reset lai dl de chinh qua mau dau tien     
+           
+    next_char1: 
+        sub dl, 1     
+        mov ah, 0EFh    ;nen do, chu trang
+        mov al, ' '
+        stosw
+        sub di,2  
+        jmp check    
+               
+    next_char2: 
+        sub dl, 1     
+        mov ah, 0B0h     ;nen vang sang, chu den
+        mov al, ' '
+        stosw 
+        sub di, 2 
+        jmp check  
+        
+    next_char3: 
+        sub dl, 1      
+        mov ah, 0DFh       ;nen cyan(luc lam), chu trang
+        mov al, ' '
+        stosw  
+        sub di, 2
+        jmp check  
+              
+    print_sang_phai:  
+        ;doi huong         
+        cmp di, 472        ;324->472
+        jz print_tren_xuong      
+        add di, 2
+        jmp rand_mau  
+                  
+    print_tren_xuong:
+        mov bx, 3       
+        ;doi huong    
+        cmp di, 3672        ;472 -> 3672
+        jz print_phai_sang         
+        add di,160
+        jmp rand_mau  
+               
+    print_phai_sang:  
+        mov bx, 2      
+        ;doi huong
+        cmp di, 3526        ;3672 ->3526
+        jz print_duoi_len        
+        sub di, 2     
+        jmp rand_mau 
+               
+    print_duoi_len:   
+        mov bx, 1              
+        ;doi huong
+        cmp di, 326          ;3526 -> 326
+        jz print           
+        sub di, 160
+        jmp rand_mau 
+                
+    print:      
+        ; giao dien chu SNAKE GAME
+        GOTOXY 20, 8  
+        printn " €€ €   €  €  € € €€€   €€€  €  €   € €€€"
+        GOTOXY 20, 9          
+        printn "€   €€  € € € €€  €     €   € € €€ €€ €"
+        GOTOXY 20, 10                                  
+        printn " €  € € € €€€ €   €€€   € € €€€ € € € €€€"
+        GOTOXY 20, 11
+        printn "  € €  €€ € € €€  €     € € € € €   € €"
+        GOTOXY 20, 12
+        printn "€€  €   € € € € € €€€   €€€ € € €   € €€€"  
+        
+    GOTOXY 27, 15
+    printn "Press any key to continue"   
+        
+    mov ah, 7     
+    int 21h    
+    
+    call clear_all
+    jmp print_screen_menu
+    ret  
+intro endp
+ 
+gudbye proc
+    mov ah, 06h
+    XOR al,al     
+    XOR cx,cx    
+    MOV dx, 184FH  
+    MOV bh, 1Eh    
+    INT 10h
+    
+    ;Tong hop lai thanh vien tham gia code va cong viec thuc hien
+    GOTOXY 4,3
+    printn "+==================Cam on thay va cac ban da theo doi==================+"                                                                                                                                                        
+    GOTOXY 4,6
+    printn "|           Thanh vien             *************     Cong viec         |"                                                                             
+    GOTOXY 4,8                                                   
+    printn "|           ----------                               ---------         |" 
+    GOTOXY 4,10
+    printn "|    Nguyen Hoang Son   - B23DCKH106       |     Code giao dien        |"  
+    GOTOXY 4,13
+    printn "|    Nguyen Quang Trung - B23DCKH122       |     Code thuat toan       |"     
+    GOTOXY 4,16
+    printn "|    Hoang Minh Son     - B23DCKH100       |     Code thuat toan       |"
+    GOTOXY 4,19                                                                       
+    printn "|    Nguyen Minh Hieu   - B23DCKH040       |     Tong hop & Bao cao    |"
+    GOTOXY 4,21
+    printn "+======================================================================+"
+    ret
+gudbye endp 
+  
 end start 
